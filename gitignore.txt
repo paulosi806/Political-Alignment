@@ -1,0 +1,22 @@
+# Alle Python-Bytecode-Dateien
+*.pyc
+
+# Alle Cache-Ordner
+__pycache__/
+
+# Virtuelle Umgebungen
+.venv/
+
+#Ignore data folder, but allow processed subfolder and specific files
+data/*
+
+!data/processed/
+data/processed/*
+!data/processed/phrase_counts_long.parquet
+!data/processed/speaker_sessions.parquet
+
+#Ignore Output
+outputs/
+
+#Ignore exploration notebooks
+notebooks/
