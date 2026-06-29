@@ -43,9 +43,14 @@ def load_speaker_sessions():
     return pd.read_parquet(HERE / "speaker_sessions.parquet")
 
 
-@st.cache_data(show_spinner="Loading phrase counts…")
-def load_phrase_counts():
-    return pd.read_parquet(HERE / "phrase_counts_long.parquet")
+@st.cache_data(show_spinner="Loading phrase counts for selected congresses…")
+def load_phrase_counts_for(congresses: tuple[int, ...]) -> pd.DataFrame:
+    import pyarrow.parquet as pq
+    table = pq.read_table(
+        HERE / "phrase_counts_long.parquet",
+        filters=[("congress", "in", list(congresses))],
+    )
+    return table.to_pandas()
 
 
 @st.cache_data(show_spinner=False)
@@ -64,7 +69,7 @@ def prepare_speaker_data(
     selected_congresses: tuple[int, ...],
 ) -> pd.DataFrame:
     ss = speaker_sessions[speaker_sessions["congress"].isin(selected_congresses)].copy()
-    pc = phrase_counts[phrase_counts["congress"].isin(selected_congresses)].copy()
+    pc = phrase_counts  # already filtered to selected_congresses by load_phrase_counts_for
 
     speaker_exposure = (
         pc.groupby("speaker_session_id", as_index=False)
@@ -95,17 +100,6 @@ def prepare_speaker_data(
     return speaker_data
 
 
-@st.cache_data(show_spinner=False)
-def filter_phrase_counts(
-    phrase_counts: pd.DataFrame,
-    speaker_session_ids: tuple[str, ...],
-    selected_congresses: tuple[int, ...],
-) -> pd.DataFrame:
-    return phrase_counts[
-        phrase_counts["congress"].isin(selected_congresses)
-        & phrase_counts["speaker_session_id"].isin(speaker_session_ids)
-    ].copy()
-
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
 
@@ -116,7 +110,6 @@ st.caption(
 )
 
 speaker_sessions = load_speaker_sessions()
-phrase_counts_raw = load_phrase_counts()
 config = load_config()
 poisson_cfg = config.get("penalized_poisson", {})
 majority_cfg = poisson_cfg.get("majority_party_by_congress_chamber", {})
@@ -165,10 +158,9 @@ with st.sidebar:
 # ── Overview ───────────────────────────────────────────────────────────────────
 
 with st.expander("📊 Data overview", expanded=True):
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     c1.metric("Unique legislators", f"{speaker_sessions['speaker_bioguide'].nunique():,}")
     c2.metric("Speaker-sessions", f"{len(speaker_sessions):,}")
-    c3.metric("Unique bigrams", f"{phrase_counts_raw['phrase'].nunique():,}")
 
     party_congress = (
         speaker_sessions
@@ -209,16 +201,18 @@ if run_clicked:
         try:
             t0 = time.time()
 
-            st.write(f"Filtering to Congress {congresses_tuple}…")
+            st.write(f"Loading phrase counts for Congress {congresses_tuple}…")
+            phrase_counts = load_phrase_counts_for(congresses_tuple)
+
+            st.write("Preparing speaker data…")
             speaker_data = prepare_speaker_data(
-                speaker_sessions, phrase_counts_raw, majority_cfg, congresses_tuple
+                speaker_sessions, phrase_counts, majority_cfg, congresses_tuple
             )
 
-            phrase_counts_filtered = filter_phrase_counts(
-                phrase_counts_raw,
-                tuple(speaker_data["speaker_session_id"].tolist()),
-                congresses_tuple,
-            )
+            phrase_counts_filtered = phrase_counts[
+                phrase_counts["speaker_session_id"].isin(speaker_data["speaker_session_id"])
+            ].copy()
+            del phrase_counts  # free memory before model fitting
 
             st.write(
                 f"Speaker-sessions: {len(speaker_data):,} · "
