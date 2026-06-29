@@ -1,0 +1,68 @@
+sample:
+  start_date: "2015-01-01"
+  end_date: "2026-05-31"
+  date_format: "%Y-%m-%d"
+  chamber: "both" #chambers: House, Senate, both
+  include_extensions_of_remarks: false
+
+paths:
+  raw: "data/raw"
+  interim: "data/interim"
+  processed: "data/processed"
+  logs: "outputs/logs"
+
+phrase_filters:
+  min_total_count: 100
+  min_speaker_sessions: 10
+  min_count_in_one_congress: 10
+
+penalized_poisson:
+  lambda_path_steps: 100
+  lambda_path_min_ratio: 0.00001
+  min_penalty_alpha: 0.00001
+  max_phrases_per_congress: null
+  top_n_phrases: 50
+  top_n_phrases_by_direction: 10
+  maxiter: 1000
+  n_jobs: 2
+  parallel_backend: "threading"
+
+  majority_party_by_congress_chamber:
+    "114":
+      House: Republican
+      Senate: Republican
+    "115":
+      House: Republican
+      Senate: Republican
+    "116":
+      House: Democrat
+      Senate: Republican
+    "117":
+      House: Democrat
+      Senate: Democrat
+    "118":
+      House: Republican
+      Senate: Democrat
+    "119":
+      House: Republican
+      Senate: Republican
+
+procedural_language:
+  roberts_file: "data/raw/procedural_language/Roberts Rules of Order.txt"
+  riddick_file: "data/raw/procedural_language/Riddick Senate Procedure_Appendix.pdf"
+
+subsampling_inference:
+  n_subsamples: 100
+  subsample_fraction: 0.1
+  random_seed: 9
+  lower_order: 3
+  upper_order: 98
+  max_draw_attempts: 500
+
+validation:
+  n_permutations: 10
+  random_seed: 9
+
+out_of_sample_validation:
+  n_folds: 5
+  random_seed: 9
