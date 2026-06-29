@@ -8,3 +8,4 @@ matplotlib
 jupyter
 joblib
 pypdf
+streamlit
