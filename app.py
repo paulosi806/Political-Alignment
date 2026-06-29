@@ -195,50 +195,58 @@ with info_col:
 
 if run_clicked:
     with st.status("Running estimation…", expanded=True) as status:
-        t0 = time.time()
+        try:
+            import traceback
+            t0 = time.time()
 
-        st.write("Preparing speaker data…")
-        speaker_data = prepare_speaker_data(
-            speaker_sessions, phrase_counts_raw, majority_cfg
-        )
-
-        phrase_counts_filtered = phrase_counts_raw.merge(
-            speaker_data[["speaker_session_id"]],
-            on="speaker_session_id",
-            how="inner",
-        )
-
-        st.write(f"Speaker-sessions: {len(speaker_data):,}")
-        st.write(f"Phrase rows: {len(phrase_counts_filtered):,}")
-        st.write("Fitting phrase-specific Poisson models…")
-
-        result = estimate_static_covariate_partisanship_model(
-            speaker_data=speaker_data,
-            phrase_counts=phrase_counts_filtered,
-            lambda_path_steps=lambda_steps,
-            lambda_path_min_ratio=float(poisson_cfg.get("lambda_path_min_ratio", 1e-5)),
-            min_penalty_alpha=float(poisson_cfg.get("min_penalty_alpha", 1e-5)),
-            maxiter=int(poisson_cfg.get("maxiter", 1000)),
-            max_phrases=int(max_phrases),
-            return_phrase_parameters=False,
-            progress_label="Main model",
-            n_jobs=n_jobs,
-            parallel_backend="threading",
-        )
-
-        elapsed = time.time() - t0
-
-        if result["success"]:
-            st.session_state["model_result"] = result
-            st.session_state["top_n"] = top_n
-            st.session_state["top_n_dir"] = top_n_dir
-            status.update(
-                label=f"Done in {elapsed:.0f}s · {result['n_phrases']:,} phrases estimated",
-                state="complete",
+            st.write("Preparing speaker data…")
+            speaker_data = prepare_speaker_data(
+                speaker_sessions, phrase_counts_raw, majority_cfg
             )
-        else:
-            status.update(label=f"Failed: {result['reason']}", state="error")
-            st.error(f"Estimation failed: {result['reason']}")
+
+            phrase_counts_filtered = phrase_counts_raw.merge(
+                speaker_data[["speaker_session_id"]],
+                on="speaker_session_id",
+                how="inner",
+            )
+
+            st.write(f"Speaker-sessions: {len(speaker_data):,}")
+            st.write(f"Phrase rows: {len(phrase_counts_filtered):,}")
+            st.write("Fitting phrase-specific Poisson models…")
+
+            result = estimate_static_covariate_partisanship_model(
+                speaker_data=speaker_data,
+                phrase_counts=phrase_counts_filtered,
+                lambda_path_steps=lambda_steps,
+                lambda_path_min_ratio=float(poisson_cfg.get("lambda_path_min_ratio", 1e-5)),
+                min_penalty_alpha=float(poisson_cfg.get("min_penalty_alpha", 1e-5)),
+                maxiter=int(poisson_cfg.get("maxiter", 1000)),
+                max_phrases=int(max_phrases),
+                return_phrase_parameters=False,
+                progress_label="Main model",
+                n_jobs=n_jobs,
+                parallel_backend="threading",
+            )
+
+            elapsed = time.time() - t0
+
+            if result["success"]:
+                st.session_state["model_result"] = result
+                st.session_state["top_n"] = top_n
+                st.session_state["top_n_dir"] = top_n_dir
+                status.update(
+                    label=f"Done in {elapsed:.0f}s · {result['n_phrases']:,} phrases estimated",
+                    state="complete",
+                )
+            else:
+                status.update(label=f"Failed: {result['reason']}", state="error")
+                st.error(f"Estimation failed: {result['reason']}")
+
+        except Exception:
+            tb = traceback.format_exc()
+            status.update(label="Crashed — see error below", state="error")
+            st.error("The model raised an exception:")
+            st.code(tb, language="python")
 
 # ── Results ────────────────────────────────────────────────────────────────────
 
