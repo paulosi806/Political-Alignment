@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Political Alignment — Congressional Speech</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  body { font-family: 'Georgia', serif; }
+  .badge-r { background:#ef4444; color:#fff; }
+  .badge-d { background:#3b82f6; color:#fff; }
+  canvas { max-height: 300px; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<!-- Header -->
+<header class="bg-white border-b border-gray-200 py-8 px-6 text-center">
+  <h1 class="text-3xl font-bold text-gray-900">Congressional Partisan Language</h1>
+  <p class="mt-2 text-gray-500 text-sm max-w-xl mx-auto">
+    Phrase-level partisanship in U.S. congressional floor speeches, 114th–119th Congress (2015–2026).
+    Based on a penalized Poisson model following Gentzkow et al. (2019).
+  </p>
+</header>
+
+<!-- Stats cards -->
+<section class="max-w-5xl mx-auto mt-8 px-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl shadow-sm p-6 text-center border border-gray-100">
+    <p class="text-4xl font-bold text-gray-900">966</p>
+    <p class="mt-1 text-sm text-gray-500">Unique legislators</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-6 text-center border border-gray-100">
+    <p class="text-4xl font-bold text-gray-900">3,269</p>
+    <p class="mt-1 text-sm text-gray-500">Speaker-sessions</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-6 text-center border border-gray-100">
+    <p class="text-4xl font-bold text-gray-900">40,416</p>
+    <p class="mt-1 text-sm text-gray-500">Unique bigrams</p>
+  </div>
+</section>
+
+<!-- Charts -->
+<section class="max-w-5xl mx-auto mt-8 px-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <h2 class="text-base font-semibold mb-4">Speaker-sessions by Congress</h2>
+    <canvas id="chartParty"></canvas>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <h2 class="text-base font-semibold mb-4">Speech volume by Congress (M tokens)</h2>
+    <canvas id="chartTokens"></canvas>
+  </div>
+</section>
+
+<!-- Partisan phrases -->
+<section class="max-w-5xl mx-auto mt-8 px-4 grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+  <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <h2 class="text-base font-semibold mb-1">Most Republican phrases</h2>
+    <p class="text-xs text-gray-400 mb-4">Bigrams used ≥500 times, ranked by Republican usage share</p>
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-gray-400 text-xs uppercase border-b">
+        <th class="pb-2">Phrase</th><th class="pb-2 text-right">R-share</th><th class="pb-2 text-right">Uses</th>
+      </tr></thead>
+      <tbody id="repTable"></tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <h2 class="text-base font-semibold mb-1">Most Democratic phrases</h2>
+    <p class="text-xs text-gray-400 mb-4">Bigrams used ≥500 times, ranked by Democratic usage share</p>
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-gray-400 text-xs uppercase border-b">
+        <th class="pb-2">Phrase</th><th class="pb-2 text-right">D-share</th><th class="pb-2 text-right">Uses</th>
+      </tr></thead>
+      <tbody id="demTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="text-center text-xs text-gray-400 pb-8">
+  Data: Congressional Record (GovInfo) · Legislators: unitedstates/congress-legislators ·
+  Methodology follows Gentzkow, Shapiro &amp; Taddy (2019)
+</footer>
+
+<script>
+const PARTY_DATA = {"labels": ["114 (2015\u201316)", "115 (2017\u201318)", "116 (2019\u201320)", "117 (2021\u201322)", "118 (2023\u201324)", "119 (2025\u201326)"], "democrat": [238, 251, 283, 276, 271, 264], "republican": [304, 301, 259, 272, 277, 273]};
+const TOKEN_DATA = {"labels": ["114 (2015\u201316)", "115 (2017\u201318)", "116 (2019\u201320)", "117 (2021\u201322)", "118 (2023\u201324)", "119 (2025\u201326)"], "democrat": [5.04, 5.53, 4.1, 3.48, 3.0, 3.05], "republican": [5.07, 4.83, 3.93, 3.53, 3.44, 2.3]};
+const REP_PHRASES = [{"phrase": "bless troop", "share": 0.988, "count": 665}, {"phrase": "radic islam", "share": 0.975, "count": 809}, {"phrase": "reckless spend", "share": 0.969, "count": 576}, {"phrase": "illeg alien", "share": 0.968, "count": 2834}, {"phrase": "illeg immigr", "share": 0.967, "count": 5001}, {"phrase": "illeg cross", "share": 0.962, "count": 764}, {"phrase": "million illeg", "share": 0.962, "count": 962}, {"phrase": "spend spree", "share": 0.955, "count": 535}, {"phrase": "peac strength", "share": 0.953, "count": 642}, {"phrase": "unborn children", "share": 0.953, "count": 662}, {"phrase": "communist china", "share": 0.951, "count": 800}, {"phrase": "open border", "share": 0.949, "count": 1786}, {"phrase": "crimin alien", "share": 0.946, "count": 541}, {"phrase": "burdensom regul", "share": 0.942, "count": 503}, {"phrase": "border crisi", "share": 0.938, "count": 1470}];
+const DEM_PHRASES = [{"phrase": "ugli bill", "share": 0.993, "count": 573}, {"phrase": "big ugli", "share": 0.988, "count": 675}, {"phrase": "tax scam", "share": 0.988, "count": 740}, {"phrase": "front group", "share": 0.987, "count": 613}, {"phrase": "koch brother", "share": 0.987, "count": 608}, {"phrase": "carbon pollut", "share": 0.984, "count": 929}, {"phrase": "reproduct healthcar", "share": 0.981, "count": 619}, {"phrase": "abort care", "share": 0.976, "count": 540}, {"phrase": "reproduct freedom", "share": 0.975, "count": 591}, {"phrase": "women color", "share": 0.974, "count": 621}, {"phrase": "forprofit colleg", "share": 0.973, "count": 627}, {"phrase": "lgbtq communiti", "share": 0.971, "count": 659}, {"phrase": "gun safeti", "share": 0.97, "count": 1254}, {"phrase": "repeal afford", "share": 0.97, "count": 1361}, {"phrase": "reproduct right", "share": 0.967, "count": 717}];
+
+const RED = "rgba(239,68,68,0.85)";
+const BLUE = "rgba(59,130,246,0.85)";
+const RED_BORDER = "rgba(239,68,68,1)";
+const BLUE_BORDER = "rgba(59,130,246,1)";
+
+new Chart(document.getElementById("chartParty"), {
+  type: "bar",
+  data: {
+    labels: PARTY_DATA.labels,
+    datasets: [
+      { label: "Democrat", data: PARTY_DATA.democrat, backgroundColor: BLUE, borderColor: BLUE_BORDER, borderWidth: 1 },
+      { label: "Republican", data: PARTY_DATA.republican, backgroundColor: RED, borderColor: RED_BORDER, borderWidth: 1 },
+    ]
+  },
+  options: { plugins: { legend: { position: "bottom" } }, scales: { x: { stacked: false }, y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById("chartTokens"), {
+  type: "bar",
+  data: {
+    labels: TOKEN_DATA.labels,
+    datasets: [
+      { label: "Democrat", data: TOKEN_DATA.democrat, backgroundColor: BLUE, borderColor: BLUE_BORDER, borderWidth: 1 },
+      { label: "Republican", data: TOKEN_DATA.republican, backgroundColor: RED, borderColor: RED_BORDER, borderWidth: 1 },
+    ]
+  },
+  options: { plugins: { legend: { position: "bottom" } }, scales: { x: { stacked: false }, y: { beginAtZero: true, title: { display: true, text: "Millions of tokens" } } } }
+});
+
+function pct(v) { return (v * 100).toFixed(1) + "%"; }
+function fmt(n) { return n.toLocaleString(); }
+
+const repTbody = document.getElementById("repTable");
+REP_PHRASES.forEach(r => {
+  repTbody.innerHTML += `<tr class="border-b border-gray-50 hover:bg-gray-50">
+    <td class="py-2 pr-2 font-mono text-xs">${r.phrase}</td>
+    <td class="py-2 text-right"><span class="badge-r text-xs px-1.5 py-0.5 rounded">${pct(r.share)}</span></td>
+    <td class="py-2 text-right text-gray-400">${fmt(r.count)}</td>
+  </tr>`;
+});
+
+const demTbody = document.getElementById("demTable");
+DEM_PHRASES.forEach(r => {
+  demTbody.innerHTML += `<tr class="border-b border-gray-50 hover:bg-gray-50">
+    <td class="py-2 pr-2 font-mono text-xs">${r.phrase}</td>
+    <td class="py-2 text-right"><span class="badge-d text-xs px-1.5 py-0.5 rounded">${pct(r.share)}</span></td>
+    <td class="py-2 text-right text-gray-400">${fmt(r.count)}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>

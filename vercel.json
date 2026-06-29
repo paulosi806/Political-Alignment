@@ -1,5 +1,4 @@
 {
-  "buildCommand": "python3 -m pip install pandas pyarrow && python3 build.py",
   "outputDirectory": "public",
   "framework": null
 }
